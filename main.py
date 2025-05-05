@@ -9,7 +9,7 @@ st.write("made by AWESOME FACTORY")
 # 変換後の画像 URL
 # image = Image.open("https://drive.google.com/uc?export=view&id=1t9PTUy89tBejKogE0ywbEkO75FEDdlpc")
 # 画像のURL
-image_url = "https://drive.google.com/thumbnail?id=1UM6Xuy2G0VxxGOnXn4hihvLxxRsV-AYQ&sz=w1000"
+image_url = "https://drive.google.com/thumbnail?id=1Jz8PMVOpddObQarH7Qhslo-EH2lFEfI1&sz=w1000"
 
 # 画像を表示
 st.image(image_url, use_container_width=True)
