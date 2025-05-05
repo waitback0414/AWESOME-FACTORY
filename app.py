@@ -34,6 +34,15 @@ def connect_gsheet():
 
 
 # === データ読み込み＆書き込み関数 ===
+# ✅ デバッグ用に追加
+try:
+    ws = connect_gsheet()
+    st.success("✅ Google Sheets 認証成功")
+except Exception as e:
+    st.error(f"❌ Google Sheets 認証エラー: {e}")
+
+
+
 def read_member_sheet():
     ws = connect_gsheet()
     data = ws.get_all_values()
