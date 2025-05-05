@@ -4,8 +4,8 @@ import gspread
 from google.oauth2.service_account import Credentials
 
 # スプレッドシート情報
-SHEET_ID = "あなたのスプレッドシートID"  # URLの「/d/」と「/edit」の間
-SHEET_NAME = "シート1"  # タブ名
+SHEET_ID = "1LYYXhCwKNgxl5m6M97tGfeFD0ZjaPu1IJALCAUY1gc0"  # URLの「/d/」と「/edit」の間
+SHEET_NAME = "2025.01"  # タブ名
 
 # 認証情報（ローカル or Cloud）
 @st.cache_resource
