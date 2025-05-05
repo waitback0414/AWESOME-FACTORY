@@ -5,6 +5,11 @@ import re
 import gspread
 from google.oauth2.service_account import Credentials
 
+# ===JSONの確認====
+st.write("Secrets keys available:", list(st.secrets.keys()))
+st.write("Service account email (from secrets):", st.secrets["gcp_service_account"].get("client_email", "None"))
+
+
 # === 設定 ===
 SHEET_ID = "1LYYXhCwKNgxl5m6M97tGfeFD0ZjaPu1IJALCAUY1gc0"  # ← ご自身のスプレッドシートIDに置き換えてください
 SHEET_NAME = "2025.01"  # ← タブ名
