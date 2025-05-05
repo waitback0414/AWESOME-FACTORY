@@ -9,5 +9,6 @@ st.write("made by AWESOME FACTORY")
 image_url = "https://drive.google.com/file/d/1t9PTUy89tBejKogE0ywbEkO75FEDdlpc"
 
 # 画像を表示
-st.image(image_url, caption="Google Drive からの画像", use_column_width=True)
+# 修正後（推奨）
+st.image(image, use_container_width=True)
 
