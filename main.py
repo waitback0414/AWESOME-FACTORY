@@ -10,5 +10,5 @@ image_url = "https://drive.google.com/file/d/1t9PTUy89tBejKogE0ywbEkO75FEDdlpc"
 
 # 画像を表示
 # 修正後（推奨）
-st.image(image, use_container_width=True)
+st.image(image_url, use_container_width=True)
 
