@@ -105,16 +105,6 @@ def connect_gsheet():
 #    st.error(f"❌ Google Sheets 認証エラー: {e}")
 
 
-pages = [
-    st.Page("app_pages/app.py", title="PDF照合アプリ", icon="📄"),
-    st.Page("app_pages/members.py", title="メンバー管理", icon="👥"),
-]
-
-pg = st.navigation(pages, position="sidebar", expanded=True)
-pg.run()
-
-
-
 
 def read_member_sheet():
     ws = connect_gsheet()
