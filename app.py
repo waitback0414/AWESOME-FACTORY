@@ -9,9 +9,9 @@ from google.oauth2.service_account import Credentials
 # ✅ 必ず一番最初に書く！
 st.set_page_config(page_title="PDF照合アプリ", layout="wide")
 
-# ✅ その後に確認コードを書く
-st.write("Secrets keys available:", list(st.secrets.keys()))
-st.write("Service account email (from secrets):", st.secrets["gcp_service_account"].get("client_email", "None"))
+# ✅ その後に確認コードを書く。グーグル認証確認用
+#st.write("Secrets keys available:", list(st.secrets.keys()))
+#st.write("Service account email (from secrets):", st.secrets["gcp_service_account"].get("client_email", "None"))
 
 
 # === 設定 ===
@@ -35,11 +35,11 @@ def connect_gsheet():
 
 # === データ読み込み＆書き込み関数 ===
 # ✅ デバッグ用に追加
-try:
-    ws = connect_gsheet()
-    st.success("✅ Google Sheets 認証成功")
-except Exception as e:
-    st.error(f"❌ Google Sheets 認証エラー: {e}")
+#try:
+#    ws = connect_gsheet()
+#    st.success("✅ Google Sheets 認証成功")
+#except Exception as e:
+#    st.error(f"❌ Google Sheets 認証エラー: {e}")
 
 
 
