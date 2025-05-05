@@ -5,4 +5,9 @@ st.set_page_config(page_title="Streamlit App", page_icon=":shark:")
 st.title("E-DOYUの回答率集計アプリ")
 st.write("made by AWESOME FACTORY")
 
+# 変換後の画像 URL
+image_url = "https://drive.google.com/file/d/1t9PTUy89tBejKogE0ywbEkO75FEDdlpc"
+
+# 画像を表示
+st.image(image_url, caption="Google Drive からの画像", use_column_width=True)
 
