@@ -68,7 +68,7 @@ def extract_pdf_data(uploaded_file):
     return pd.DataFrame(data)
 
 # === Streamlit アプリ本体 ===
-st.set_page_config(page_title="PDF照合アプリ", layout="wide")
+# st.set_page_config(page_title="PDF照合アプリ", layout="wide")
 st.title("📄 PDFとGoogle Sheetsの照合アプリ")
 
 uploaded_pdf = st.file_uploader("PDFファイルをアップロード（名前＋回答日）", type="pdf")
