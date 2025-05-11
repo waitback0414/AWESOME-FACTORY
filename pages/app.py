@@ -348,14 +348,13 @@ if uploaded_pdf:
         # グラフ描画
         import altair as alt
         
-        # Altair 用のデータ整形
+        # DataFrameを整形（所属列がindexなのでreset_index）
         df_long = summary.reset_index().melt(
-            id_vars="index",
+            id_vars="所属",               # ← ここを "所属" に変更
             value_vars=["回答率（%）", "出席率（%）"],
             var_name="指標",
             value_name="割合"
         )
-        df_long.rename(columns={"index": "所属"}, inplace=True)
         
         # Altair グラフ
         chart = alt.Chart(df_long).mark_bar().encode(
@@ -367,6 +366,7 @@ if uploaded_pdf:
         )
         
         st.altair_chart(chart, use_container_width=True)
+        
 
 
 
