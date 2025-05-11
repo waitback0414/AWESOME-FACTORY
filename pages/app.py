@@ -353,3 +353,15 @@ if uploaded_pdf:
         st.error(f"エラーが発生しました: {e}")
 else:
     st.info("PDFファイルをアップロードしてください。")
+
+
+import matplotlib.pyplot as plt
+
+st.subheader("📊 所属別 回答率・出席率（棒グラフ）")
+
+fig, ax = plt.subplots()
+summary[["回答率（%）", "出席率（%）"]].plot(kind='bar', ax=ax)
+plt.ylabel("割合（％）")
+plt.title("所属別 回答率・出席率")
+plt.xticks(rotation=45)
+st.pyplot(fig)
