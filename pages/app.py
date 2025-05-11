@@ -67,6 +67,9 @@ import fitz  # PyMuPDF
 import re
 import gspread
 from google.oauth2.service_account import Credentials
+from PIL import Image
+import io
+from google.cloud import vision
 
 # ===JSONの確認====
 # ✅ 必ず一番最初に書く！
@@ -115,9 +118,11 @@ def read_member_sheet():
 from google.cloud import vision
 import io
 
-def detect_text_from_pdf_page(page):
-    pix = page.get_pixmap()
-    img_bytes = pix.tobytes("png")
+# === OCR関数 ===
+def detect_attendance_text(img_region):
+    img_bytes_io = io.BytesIO()
+    img_region.save(img_bytes_io, format="PNG")
+    img_bytes = img_bytes_io.getvalue()
 
     client = vision.ImageAnnotatorClient.from_service_account_info(
         st.secrets["gcp_service_account"]
@@ -126,10 +131,18 @@ def detect_text_from_pdf_page(page):
     response = client.text_detection(image=image)
 
     if response.error.message:
-        raise Exception(f"Vision API エラー: {response.error.message}")
+        return "エラー"
 
     text = response.text_annotations[0].description if response.text_annotations else ""
-    return text
+
+    if "出席" in text:
+        return "出席"
+    elif "欠席" in text:
+        return "欠席"
+    elif "未回答" in text:
+        return "未回答"
+    else:
+        return "未検出"
 
 
 
@@ -160,13 +173,68 @@ def detect_text_from_pdf_page(page):
 #     doc.close()
 #     return pd.DataFrame(data)
 
-def extract_pdf_data(uploaded_file):
-    import re
-    doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
-    data = []
+# def extract_pdf_data(uploaded_file):
+#     import re
+#     doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+#     data = []
 
-    for page in doc:
-        blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, ...)
+#     for page in doc:
+#         blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, ...)
+
+#         for block in blocks:
+#             x0, y0, x1, y1, text, *_ = block
+#             lines = text.strip().split("\n")
+#             if not lines:
+#                 continue
+
+#             name_candidate = lines[0].strip()
+
+#             # ✅ 名前候補：x0が300〜320にあり、空白を含む（姓と名）
+#             if 300 <= x0 <= 320 and " " in name_candidate:
+#                 entry = {"名前": name_candidate}
+
+#                 # 回答日：2行目に日付がある場合
+#                 if len(lines) > 1:
+#                     second_line = lines[1].strip()
+#                     if re.match(r'^\d{4}/\d{2}/\d{2}$', second_line):
+#                         entry["回答日"] = second_line
+#                     else:
+#                         entry["回答日"] = pd.NA
+#                 else:
+#                     entry["回答日"] = pd.NA
+
+#                 # 出席情報：x0 - 150（≒150〜170）あたりにある同じy位置の文字をチェック
+#                 status_x_range = (x0 - 155, x0 - 145)  # 例: 145〜155
+#                 matched_status = "未検出"
+
+#                 for s_block in blocks:
+#                     sx0, sy0, sx1, sy1, s_text, *_ = s_block
+#                     if status_x_range[0] <= sx0 <= status_x_range[1] and abs(sy0 - y0) < 5:
+#                         if "出席" in s_text:
+#                             matched_status = "出席"
+#                         elif "欠席" in s_text:
+#                             matched_status = "欠席"
+#                         elif "未回答" in s_text:
+#                             matched_status = "未回答"
+#                         break
+
+#                 entry["出席情報"] = matched_status
+#                 data.append(entry)
+
+#     doc.close()
+#     return pd.DataFrame(data)
+
+
+
+# === PDF処理関数 ===
+def extract_pdf_data(file_stream):
+    doc = fitz.open(stream=file_stream.read(), filetype="pdf")
+    records = []
+
+    for page_index, page in enumerate(doc):
+        blocks = page.get_text("blocks")
+        pix = page.get_pixmap()
+        img = Image.open(io.BytesIO(pix.tobytes("png")))
 
         for block in blocks:
             x0, y0, x1, y1, text, *_ = block
@@ -176,41 +244,27 @@ def extract_pdf_data(uploaded_file):
 
             name_candidate = lines[0].strip()
 
-            # ✅ 名前候補：x0が300〜320にあり、空白を含む（姓と名）
-            if 300 <= x0 <= 320 and " " in name_candidate:
+            if 300 <= x0 <= 340 and " " in name_candidate:
                 entry = {"名前": name_candidate}
 
-                # 回答日：2行目に日付がある場合
-                if len(lines) > 1:
-                    second_line = lines[1].strip()
-                    if re.match(r'^\d{4}/\d{2}/\d{2}$', second_line):
-                        entry["回答日"] = second_line
-                    else:
-                        entry["回答日"] = pd.NA
+                # 回答日
+                if len(lines) > 1 and re.match(r'^\d{4}/\d{2}/\d{2}$', lines[1].strip()):
+                    entry["回答日"] = lines[1].strip()
                 else:
                     entry["回答日"] = pd.NA
 
-                # 出席情報：x0 - 150（≒150〜170）あたりにある同じy位置の文字をチェック
-                status_x_range = (x0 - 155, x0 - 145)  # 例: 145〜155
-                matched_status = "未検出"
+                # 出席画像部分をcrop
+                crop_left = max(x0 - 150, 0)
+                crop_right = x0 - 50
+                crop_box = (crop_left, y0, crop_right, y1)
+                cropped_img = img.crop(crop_box)
 
-                for s_block in blocks:
-                    sx0, sy0, sx1, sy1, s_text, *_ = s_block
-                    if status_x_range[0] <= sx0 <= status_x_range[1] and abs(sy0 - y0) < 5:
-                        if "出席" in s_text:
-                            matched_status = "出席"
-                        elif "欠席" in s_text:
-                            matched_status = "欠席"
-                        elif "未回答" in s_text:
-                            matched_status = "未回答"
-                        break
-
-                entry["出席情報"] = matched_status
-                data.append(entry)
+                # OCRで出席情報抽出
+                entry["出席情報"] = detect_attendance_text(cropped_img)
+                records.append(entry)
 
     doc.close()
-    return pd.DataFrame(data)
-
+    return pd.DataFrame(records)
 
 
 
@@ -255,9 +309,11 @@ if uploaded_pdf:
         csv_merged = df_merged.to_csv(index=False, encoding="utf-8-sig")
         csv_summary = summary.to_csv(index=True, encoding="utf-8-sig")
 
+
         st.download_button("📥 名前・回答日一覧をCSVでダウンロード", csv_merged, file_name="回答一覧.csv", mime="text/csv")
         st.download_button("📥 所属別集計をCSVでダウンロード", csv_summary, file_name="所属別集計.csv", mime="text/csv")
         st.download_button("📥 抽出結果をCSVでダウンロード", csv_download, file_name="抽出結果.csv", mime="text/csv")
+
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
