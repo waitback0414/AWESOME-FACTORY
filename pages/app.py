@@ -251,11 +251,13 @@ if uploaded_pdf:
         st.dataframe(summary)
 
         # ダウンロード
+        csv_download = df_pdf.to_csv(index=False, encoding="utf-8-sig")
         csv_merged = df_merged.to_csv(index=False, encoding="utf-8-sig")
         csv_summary = summary.to_csv(index=True, encoding="utf-8-sig")
 
         st.download_button("📥 名前・回答日一覧をCSVでダウンロード", csv_merged, file_name="回答一覧.csv", mime="text/csv")
         st.download_button("📥 所属別集計をCSVでダウンロード", csv_summary, file_name="所属別集計.csv", mime="text/csv")
+        st.download_button("📥 抽出結果をCSVでダウンロード", csv_download, file_name="抽出結果.csv", mime="text/csv")
 
     except Exception as e:
         st.error(f"エラーが発生しました: {e}")
