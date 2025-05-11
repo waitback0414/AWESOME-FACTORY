@@ -161,54 +161,52 @@ def detect_text_from_pdf_page(page):
 #     return pd.DataFrame(data)
 
 def extract_pdf_data(uploaded_file):
+    import re
     doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
     data = []
 
     for page in doc:
-        blocks = page.get_text("blocks")  # [(x0, y0, x1, y1, text, ...)]
+        blocks = page.get_text("blocks")  # (x0, y0, x1, y1, text, ...)
 
-        # 出席情報ブロック候補（x座標が左側、文字が「出席」など）
-        attendance_blocks = [
-            (x0, y0, x1, y1, text.strip())
-            for (x0, y0, x1, y1, text, *_)
-            in blocks
-            if x0 < 280 and any(kw in text for kw in ["出席", "欠席", "未回答"])
-        ]
-
-        # 名前ブロック候補（中央付近）
-        for (x0, y0, x1, y1, text, *_ ) in blocks:
-            if not (300 <= x0 <= 320):
+        for block in blocks:
+            x0, y0, x1, y1, text, *_ = block
+            lines = text.strip().split("\n")
+            if not lines:
                 continue
 
-            name_candidate = text.strip()
-            if " " not in name_candidate or any(kw in name_candidate for kw in ["確認", "申込", "掲示板", "任意", "√", "/", "外部"]):
-                continue
+            name_candidate = lines[0].strip()
 
-            # 同じ行（y位置がほぼ一致する）で左側にある出席情報を探す
-            matched_status = "未検出"
-            for ax0, ay0, ax1, ay1, atext in attendance_blocks:
-                if abs(y0 - ay0) < 5:  # 行ピッチ（y方向）を近似で一致とみなす
-                    if "出席" in atext:
-                        matched_status = "出席"
-                    elif "欠席" in atext:
-                        matched_status = "欠席"
-                    elif "未回答" in atext:
-                        matched_status = "未回答"
-                    break
+            # ✅ 名前候補：x0が300〜320にあり、空白を含む（姓と名）
+            if 300 <= x0 <= 320 and " " in name_candidate:
+                entry = {"名前": name_candidate}
 
-            # 回答日っぽい文字列を右側に探す（任意）
-            answer_date = pd.NA
-            for (dx0, dy0, dx1, dy1, dtext, *_ ) in blocks:
-                if 340 <= dx0 <= 420 and abs(dy0 - y0) < 5:
-                    if re.match(r'^\d{4}/\d{2}/\d{2}$', dtext.strip()):
-                        answer_date = dtext.strip()
+                # 回答日：2行目に日付がある場合
+                if len(lines) > 1:
+                    second_line = lines[1].strip()
+                    if re.match(r'^\d{4}/\d{2}/\d{2}$', second_line):
+                        entry["回答日"] = second_line
+                    else:
+                        entry["回答日"] = pd.NA
+                else:
+                    entry["回答日"] = pd.NA
+
+                # 出席情報：x0 - 150（≒150〜170）あたりにある同じy位置の文字をチェック
+                status_x_range = (x0 - 155, x0 - 145)  # 例: 145〜155
+                matched_status = "未検出"
+
+                for s_block in blocks:
+                    sx0, sy0, sx1, sy1, s_text, *_ = s_block
+                    if status_x_range[0] <= sx0 <= status_x_range[1] and abs(sy0 - y0) < 5:
+                        if "出席" in s_text:
+                            matched_status = "出席"
+                        elif "欠席" in s_text:
+                            matched_status = "欠席"
+                        elif "未回答" in s_text:
+                            matched_status = "未回答"
                         break
 
-            data.append({
-                "名前": name_candidate,
-                "出席情報": matched_status,
-                "回答日": answer_date
-            })
+                entry["出席情報"] = matched_status
+                data.append(entry)
 
     doc.close()
     return pd.DataFrame(data)
