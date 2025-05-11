@@ -98,6 +98,19 @@ def connect_gsheet():
     worksheet = client.open_by_key(SHEET_ID).worksheet(SHEET_NAME)
     return worksheet
 
+@st.cache_resource
+def get_gspread_client():
+    creds = Credentials.from_service_account_info(
+        st.secrets["gcp_service_account"],
+        scopes=["https://www.googleapis.com/auth/spreadsheets"]
+    )
+    return gspread.authorize(creds)
+
+def list_sheet_names():
+    client = get_gspread_client()
+    spreadsheet = client.open_by_key(MEMBER_SHEET_ID)
+    return [s.title for s in spreadsheet.worksheets()]
+
 
 # === データ読み込み＆書き込み関数 ===
 # ✅ デバッグ用に追加
@@ -109,14 +122,23 @@ def connect_gsheet():
 
 
 
-def read_member_sheet():
-    ws = connect_gsheet()
+# def read_member_sheet():
+#     ws = connect_gsheet()
+#     data = ws.get_all_values()
+#     df = pd.DataFrame(data[1:], columns=data[0])  # 1行目を列名に
+#     return df
+def read_member_sheet(sheet_name):
+    client = get_gspread_client()
+    ws = client.open_by_key(MEMBER_SHEET_ID).worksheet(sheet_name)
     data = ws.get_all_values()
-    df = pd.DataFrame(data[1:], columns=data[0])  # 1行目を列名に
+    df = pd.DataFrame(data[1:], columns=data[0])  # ヘッダーあり
     return df
+
 
 from google.cloud import vision
 import io
+
+
 
 # === OCR関数 ===
 def detect_attendance_text(img_region):
@@ -272,6 +294,11 @@ def extract_pdf_data(file_stream):
 # st.set_page_config(page_title="PDF照合アプリ", layout="wide")
 st.title("📄 PDFとGoogle Sheetsの照合アプリ")
 
+# プルダウンでメンバーシートを選択
+sheet_names = list_sheet_names()
+selected_sheet = st.selectbox("メンバーシートを選択", sheet_names)
+
+
 uploaded_pdf = st.file_uploader("PDFファイルをアップロード（名前＋回答日）", type="pdf")
 
 if uploaded_pdf:
@@ -280,11 +307,12 @@ if uploaded_pdf:
         st.subheader("🔍 抽出されたPDFデータ")
         st.dataframe(df_pdf)
 
-        df_member = read_member_sheet()
+        df_member = read_member_sheet(selected_sheet)
         st.subheader("📋 Google Sheetsメンバー一覧")
         st.dataframe(df_member)
 
         # 名前で照合して所属付与
+        
         # df_merged = pd.merge(df_member, df_pdf, on="名前", how="left")
         df_merged = pd.merge(df_member, df_pdf, on="名前", how="left")
 
