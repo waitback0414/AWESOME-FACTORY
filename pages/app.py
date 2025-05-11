@@ -338,6 +338,18 @@ if uploaded_pdf:
         st.subheader("📊 所属別回答率")
         st.dataframe(summary)
 
+        import matplotlib.pyplot as plt
+
+        st.subheader("📊 所属別 回答率・出席率（棒グラフ）")
+        
+        fig, ax = plt.subplots()
+        summary[["回答率（%）", "出席率（%）"]].plot(kind='bar', ax=ax)
+        plt.ylabel("割合（％）")
+        plt.title("所属別 回答率・出席率")
+        plt.xticks(rotation=45)
+        st.pyplot(fig)
+
+
         # ダウンロード
         csv_download = df_pdf.to_csv(index=False, encoding="utf-8-sig")
         csv_merged = df_merged.to_csv(index=False, encoding="utf-8-sig")
@@ -355,13 +367,3 @@ else:
     st.info("PDFファイルをアップロードしてください。")
 
 
-import matplotlib.pyplot as plt
-
-st.subheader("📊 所属別 回答率・出席率（棒グラフ）")
-
-fig, ax = plt.subplots()
-summary[["回答率（%）", "出席率（%）"]].plot(kind='bar', ax=ax)
-plt.ylabel("割合（％）")
-plt.title("所属別 回答率・出席率")
-plt.xticks(rotation=45)
-st.pyplot(fig)
