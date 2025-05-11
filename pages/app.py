@@ -319,15 +319,21 @@ if uploaded_pdf:
         # 所属別集計
         group_total = df_member.groupby("所属").size()
         group_answered = df_merged[df_merged["回答日"].notna()].groupby("所属").size()
+        # 所属別：出席の人数（分子2）
+        group_attended = df_merged[df_merged["出席情報"] == "出席"].groupby("所属").size()
 
+# 統合
         summary = pd.concat([
-            group_total.rename("分母（人数）"),
-            group_answered.rename("分子（回答あり）")
+            group_total.rename("人数"),
+            group_answered.rename("回答済人数"),
+            group_attended.rename("出席人数")
         ], axis=1).fillna(0)
 
-        summary["分母（人数）"] = summary["分母（人数）"].astype(int)
-        summary["分子（回答あり）"] = summary["分子（回答あり）"].astype(int)
-        summary["回答率（%）"] = (summary["分子（回答あり）"] / summary["分母（人数）"] * 100).round(1)
+        summary["人数"] = summary["人数"].astype(int)
+        summary["回答済人数"] = summary["回答済人数"].astype(int)
+        summary["出席人数"] = summary["出席人数"].astype(int)
+        summary["回答率（%）"] = (summary["回答済人数"] / summary["人数"] * 100).round(1)
+        summary["出席率（%）"] = (summary["出席人数"] / summary["人数"] * 100).round(1)
 
         st.subheader("📊 所属別回答率")
         st.dataframe(summary)
