@@ -112,32 +112,87 @@ def read_member_sheet():
     df = pd.DataFrame(data[1:], columns=data[0])  # 1行目を列名に
     return df
 
+from google.cloud import vision
+import io
+
+def detect_text_from_pdf_page(page):
+    pix = page.get_pixmap()
+    img_bytes = pix.tobytes("png")
+
+    client = vision.ImageAnnotatorClient.from_service_account_info(
+        st.secrets["gcp_service_account"]
+    )
+    image = vision.Image(content=img_bytes)
+    response = client.text_detection(image=image)
+
+    if response.error.message:
+        raise Exception(f"Vision API エラー: {response.error.message}")
+
+    text = response.text_annotations[0].description if response.text_annotations else ""
+    return text
+
+
+
+# def extract_pdf_data(uploaded_file):
+#     doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
+#     data = []
+
+#     for page in doc:
+#         blocks = page.get_text("blocks")
+#         for block in blocks:
+#             x0, y0, x1, y1, text, *_ = block
+#             lines = text.strip().split("\n")
+#             if not lines:
+#                 continue
+
+#             name_candidate = lines[0].strip()
+#             if 300 <= x0 <= 320 and " " in name_candidate and "確認" not in name_candidate:
+#                 entry = {"名前": name_candidate}
+#                 if len(lines) > 1:
+#                     second_line = lines[1].strip()
+#                     if re.match(r'^\d{4}/\d{2}/\d{2}$', second_line):
+#                         entry["回答日"] = second_line
+#                     else:
+#                         entry["回答日"] = pd.NA
+#                 else:
+#                     entry["回答日"] = pd.NA
+#                 data.append(entry)
+#     doc.close()
+#     return pd.DataFrame(data)
+
 def extract_pdf_data(uploaded_file):
     doc = fitz.open(stream=uploaded_file.read(), filetype="pdf")
     data = []
 
     for page in doc:
-        blocks = page.get_text("blocks")
-        for block in blocks:
-            x0, y0, x1, y1, text, *_ = block
-            lines = text.strip().split("\n")
-            if not lines:
-                continue
+        ocr_text = detect_text_from_pdf_page(page)
+        lines = ocr_text.splitlines()
 
-            name_candidate = lines[0].strip()
-            if 300 <= x0 <= 320 and " " in name_candidate and "確認" not in name_candidate:
-                entry = {"名前": name_candidate}
-                if len(lines) > 1:
-                    second_line = lines[1].strip()
-                    if re.match(r'^\d{4}/\d{2}/\d{2}$', second_line):
-                        entry["回答日"] = second_line
-                    else:
-                        entry["回答日"] = pd.NA
+        for i, line in enumerate(lines):
+            if re.match(r"^\S+\s\S+$", line):  # 名前っぽい行（苗字と名前の間にスペース）
+                name = line.strip()
+                status = "未検出"
+                if i > 0:
+                    prev_line = lines[i - 1]
+                    if "出席" in prev_line:
+                        status = "出席"
+                    elif "欠席" in prev_line:
+                        status = "欠席"
+                    elif "未回答" in prev_line:
+                        status = "未回答"
+                entry = {"名前": name, "出席情報": status}
+
+                # 回答日も探す（次の行）
+                if i + 1 < len(lines) and re.match(r'^\d{4}/\d{2}/\d{2}$', lines[i + 1].strip()):
+                    entry["回答日"] = lines[i + 1].strip()
                 else:
                     entry["回答日"] = pd.NA
+
                 data.append(entry)
+
     doc.close()
     return pd.DataFrame(data)
+
 
 # === Streamlit アプリ本体 ===
 # st.set_page_config(page_title="PDF照合アプリ", layout="wide")
@@ -156,6 +211,7 @@ if uploaded_pdf:
         st.dataframe(df_member)
 
         # 名前で照合して所属付与
+        # df_merged = pd.merge(df_member, df_pdf, on="名前", how="left")
         df_merged = pd.merge(df_member, df_pdf, on="名前", how="left")
 
         # 所属別集計
