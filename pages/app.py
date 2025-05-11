@@ -83,7 +83,7 @@ st.set_page_config(page_title="PDF照合アプリ", layout="wide")
 # === 設定 ===
 SHEET_ID = "1LYYXhCwKNgxl5m6M97tGfeFD0ZjaPu1IJALCAUY1gc0"  # ← ご自身のスプレッドシートIDに置き換えてください
 SHEET_NAME = "2025.01"  # ← タブ名
-
+MEMBER_SHEET_ID = "1LYYXhCwKNgxl5m6M97tGfeFD0ZjaPu1IJALCAUY1gc0"
 # === Google Sheets 認証処理 ===
 @st.cache_resource
 def connect_gsheet():
