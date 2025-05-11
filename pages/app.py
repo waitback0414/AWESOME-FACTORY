@@ -339,15 +339,22 @@ if uploaded_pdf:
         st.dataframe(summary)
 
         import matplotlib.pyplot as plt
-
+        import matplotlib.font_manager as fm
+        
+        # 日本語フォントの指定（DejaVu Sans はCloudでも比較的使える）
+        plt.rcParams["font.family"] = "sans-serif"
+        plt.rcParams["font.sans-serif"] = ["IPAexGothic", "Noto Sans CJK JP", "DejaVu Sans", "Arial Unicode MS"]
+        
+        # グラフ描画
         st.subheader("📊 所属別 回答率・出席率（棒グラフ）")
         
         fig, ax = plt.subplots()
         summary[["回答率（%）", "出席率（%）"]].plot(kind='bar', ax=ax)
-        plt.ylabel("割合（％）")
-        plt.title("所属別 回答率・出席率")
-        plt.xticks(rotation=45)
+        ax.set_ylabel("割合（％）", fontsize=12)
+        ax.set_title("所属別 回答率・出席率", fontsize=14)
+        ax.set_xticklabels(summary.index, rotation=45, ha='right')
         st.pyplot(fig)
+
 
 
         # ダウンロード
