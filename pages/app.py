@@ -348,7 +348,7 @@ if uploaded_pdf:
         # グラフ描画
         import altair as alt
         
-        # データ整形（indexが"所属"として存在する想定）
+        # データ整形
         df_long = summary.reset_index().melt(
             id_vars="所属",
             value_vars=["回答率（%）", "出席率（%）"],
@@ -356,17 +356,29 @@ if uploaded_pdf:
             value_name="割合"
         )
         
-        # グループごとに並列に表示する Altair グラフ
+        # グループ棒グラフ（所属 × 指標ごとに横並び）
         chart = alt.Chart(df_long).mark_bar().encode(
             x=alt.X("所属:N", title="所属"),
             y=alt.Y("割合:Q", title="割合（％）"),
             color="指標:N",
-            column=alt.Column("指標:N", title="指標")  # 分割して並列に配置
+            column=alt.Column("指標:N", title=None)
         ).properties(
-            title="所属別 回答率と出席率",
+            title="所属別 回答率と出席率"
         )
         
-        st.altair_chart(chart, use_container_width=True)
+        # 横並びではなく1つの軸に並べるなら 'x': 指標+所属 にする
+        grouped_chart = alt.Chart(df_long).mark_bar().encode(
+            x=alt.X("所属:N", title="所属", axis=alt.Axis(labelAngle=-45)),
+            y=alt.Y("割合:Q", title="割合（％）"),
+            color="指標:N",
+            xOffset="指標:N"  # ← グループ化表示の鍵
+        ).properties(
+            title="所属別 回答率と出席率",
+            width=600,
+            height=400
+        )
+        
+        st.altair_chart(grouped_chart, use_container_width=True)
 
 
 
