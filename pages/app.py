@@ -346,14 +346,28 @@ if uploaded_pdf:
         plt.rcParams["font.sans-serif"] = ["IPAexGothic", "Noto Sans CJK JP", "DejaVu Sans", "Arial Unicode MS"]
         
         # グラフ描画
-        st.subheader("📊 所属別 回答率・出席率（棒グラフ）")
+        import altair as alt
         
-        fig, ax = plt.subplots()
-        summary[["回答率（%）", "出席率（%）"]].plot(kind='bar', ax=ax)
-        ax.set_ylabel("割合（％）", fontsize=12)
-        ax.set_title("所属別 回答率・出席率", fontsize=14)
-        ax.set_xticklabels(summary.index, rotation=45, ha='right')
-        st.pyplot(fig)
+        # Altair 用のデータ整形
+        df_long = summary.reset_index().melt(
+            id_vars="index",
+            value_vars=["回答率（%）", "出席率（%）"],
+            var_name="指標",
+            value_name="割合"
+        )
+        df_long.rename(columns={"index": "所属"}, inplace=True)
+        
+        # Altair グラフ
+        chart = alt.Chart(df_long).mark_bar().encode(
+            x=alt.X("所属:N", title="所属"),
+            y=alt.Y("割合:Q", title="割合（％）"),
+            color="指標:N"
+        ).properties(
+            title="所属別 回答率と出席率"
+        )
+        
+        st.altair_chart(chart, use_container_width=True)
+
 
 
 
