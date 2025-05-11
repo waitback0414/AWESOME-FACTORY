@@ -165,33 +165,49 @@ def extract_pdf_data(uploaded_file):
     data = []
 
     for page in doc:
-        ocr_text = detect_text_from_pdf_page(page)
-        lines = ocr_text.splitlines()
+        blocks = page.get_text("blocks")  # (x0, y0, x1, y1, "text", block_no, block_type)
+        for block in blocks:
+            x0, y0, x1, y1, text, *_ = block
+            lines = text.strip().split("\n")
+            if not lines:
+                continue
 
-        for i, line in enumerate(lines):
-            if re.match(r"^\S+\s\S+$", line):  # 名前っぽい行（苗字と名前の間にスペース）
-                name = line.strip()
-                status = "未検出"
-                if i > 0:
-                    prev_line = lines[i - 1]
-                    if "出席" in prev_line:
-                        status = "出席"
-                    elif "欠席" in prev_line:
-                        status = "欠席"
-                    elif "未回答" in prev_line:
-                        status = "未回答"
-                entry = {"名前": name, "出席情報": status}
+            name_candidate = lines[0].strip()
 
-                # 回答日も探す（次の行）
-                if i + 1 < len(lines) and re.match(r'^\d{4}/\d{2}/\d{2}$', lines[i + 1].strip()):
-                    entry["回答日"] = lines[i + 1].strip()
+            # 名前のようなテキストかを判定する座標・構造条件
+            if 300 <= x0 <= 320 and " " in name_candidate:
+                # フィルタリング：ノイズ除去
+                if any(keyword in name_candidate for keyword in ["確認", "申込", "掲示板", "任意", "√", "/", "外部", "対象", "理事会"]):
+                    continue
+
+                entry = {"名前": name_candidate}
+
+                # 回答日の抽出（2行目に存在すれば）
+                if len(lines) > 1:
+                    second_line = lines[1].strip()
+                    if re.match(r'^\d{4}/\d{2}/\d{2}$', second_line):
+                        entry["回答日"] = second_line
+                    else:
+                        entry["回答日"] = pd.NA
                 else:
                     entry["回答日"] = pd.NA
+
+                # OCRによる出席情報の取得
+                ocr_text = detect_text_from_pdf_page(page)
+                if f"{name_candidate}\n出席" in ocr_text:
+                    entry["出席情報"] = "出席"
+                elif f"{name_candidate}\n欠席" in ocr_text:
+                    entry["出席情報"] = "欠席"
+                elif f"{name_candidate}\n未回答" in ocr_text:
+                    entry["出席情報"] = "未回答"
+                else:
+                    entry["出席情報"] = "未検出"
 
                 data.append(entry)
 
     doc.close()
     return pd.DataFrame(data)
+
 
 
 # === Streamlit アプリ本体 ===
